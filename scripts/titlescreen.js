@@ -1,5 +1,5 @@
 scene('title', () => {
-    
+
 
 // Title screen scene
 
@@ -25,4 +25,4 @@ playButton.onClick(() => {
 
 // End of scene
 })
-go('title')
+// go('title')
