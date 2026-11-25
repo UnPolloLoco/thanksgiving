@@ -1,11 +1,18 @@
 scene('game', () => {
 
+    
 // Game scene
 
-add([
+const bean = add([
+    pos(0),
     sprite('bean')
 ])
 
+onUpdate(() => {
+    bean.pos = mousePos()
+})
 
+
+// End of scene
 });
-go('game')
+// go('game')
