@@ -72,20 +72,30 @@ class Tree {
         );
         this.pos = pos.add(this.offset);
         this.color = rgb(randi(150,255), randi(0,80), 0)
+        this.rect1 = Rect.fromPoints(this.pos.add(-200, -550), this.pos.add(200, -150));
+        this.rect2 = Rect.fromPoints(this.pos.add(-40, -150), this.pos.add(40, 0));
+        this.opacity = 1;
     }
 
     draw() {
+        if (this.rect1.contains(player.pos) || this.rect2.contains(player.pos)) { 
+            this.opacity = 0.3;
+        } else {
+            this.opacity = 1;
+        }
         drawRect({
             pos: this.pos,
             width: 80, height: 150,
             color: this.color,
-            anchor: 'bot'
+            anchor: 'bot',
+            opacity: this.opacity,
         })
         drawRect({
             pos: this.pos.sub(0,150),
             width: 400, height: 400,
             color: this.color,
-            anchor: 'bot'
+            anchor: 'bot',
+            opacity: this.opacity,
         })
     }
 }
