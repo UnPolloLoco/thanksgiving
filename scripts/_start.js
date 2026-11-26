@@ -2,6 +2,7 @@ kaboom({
     letterbox: true,
     width: 1280,
     height: 720,
+    font: 'ubuntu',
     buttons: {
 		up:      { keyboard: ["up", "w"] },
 		down:    { keyboard: ["down", "s"] },
@@ -11,6 +12,9 @@ kaboom({
 });
 
 loadBean();
+
+loadRoot('https://unpolloloco.github.io/thanksgiving/fonts/');
+loadFont("ubuntu", "Ubuntu-Light.ttf");
 
 // loadRoot('https://unpolloloco.github.io/thanksgiving/sprites/');
 
@@ -27,3 +31,5 @@ function fromStringPos(s) {
     let split = s.split(',');
     return vec2(Number(split[0]), Number(split[1]));
 }
+
+function hsl(h,s,l) { return hsl2rgb(h/360, s, l); }
