@@ -12,6 +12,14 @@ const WORLD_DATA = {}
 
 class Chunk {
     constructor(pos) {
+        this.tiles = this.generateTiles(pos);
+        this.pos = pos;
+        
+        WORLD_DATA[toStringPos(pos)] = this;
+        // console.log(`New chunk at ${toStringPos(pos)}`);
+    }
+
+    generateTiles(pos) {
         let chunkTiles = {}
 
         for (let x = 0; x < CHUNK_SIZE; x++) {
@@ -24,12 +32,7 @@ class Chunk {
             }
         }
 
-        this.tiles = chunkTiles;
-        this.pos = pos;
-        // console.log(`New chunk at ${toStringPos(pos)}`);
-
-        WORLD_DATA[toStringPos(pos)] = this;
-
+        return chunkTiles;
     }
 }
 
@@ -37,6 +40,53 @@ class Tile {
     constructor(pos) {
         this.pos = pos;
         this.color = rgb(230, randi(150, 210), 0);
+        this.content = [];
+
+        if (chance(0.1)) {
+            this.content.push(new Tree(pos));
+        }
+    }
+}
+
+class Player {
+    constructor() {
+        this.pos = vec2(0);
+        this.speed = 400;
+        this.currentChunk = null;
+    }
+
+    draw() {
+        drawSprite({
+            pos: this.pos,
+            sprite: 'bean',
+            anchor: 'bot'
+        })
+    }
+}
+
+class Tree {
+    constructor(pos) {
+        this.offset = vec2(
+            rand(0, TILE_SIZE),
+            rand(0, TILE_SIZE),
+        );
+        this.pos = pos.add(this.offset);
+        this.color = rgb(randi(150,255), randi(0,80), 0)
+    }
+
+    draw() {
+        drawRect({
+            pos: this.pos,
+            width: 80, height: 150,
+            color: this.color,
+            anchor: 'bot'
+        })
+        drawRect({
+            pos: this.pos.sub(0,150),
+            width: 400, height: 400,
+            color: this.color,
+            anchor: 'bot'
+        })
     }
 }
 
@@ -44,16 +94,7 @@ for (chunkPos of INCLUSIVE_NEIGHBORS) {
     new Chunk(chunkPos)
 }
 
-const player = add([
-    pos(50,60),
-    sprite('bean'),
-    anchor('center'),
-    z(LAYERS.player),
-    {
-        speed: 400,
-        currentChunk: null,
-    }
-])
+const player = new Player()
 
 function updatePlayer() {
     setCamPos(player.pos)
@@ -65,10 +106,10 @@ function updatePlayer() {
 }
 updatePlayer()
 
-function isPosOnScreen(pos, margin=0) {
+function isPosOnScreen(pos, margin=1) {
     let p = player.pos;
-    let w = width()/2 + margin + TILE_SIZE;
-    let h = height()/2 + margin + TILE_SIZE;
+    let w = width()/2 + margin*TILE_SIZE;
+    let h = height()/2 + margin*TILE_SIZE;
 
     let left = p.x - w;
     let right = p.x + w;
@@ -103,6 +144,8 @@ onUpdate(() => {
 
 
 onDraw(() => {
+    let itemDrawOrder = [player];
+
     for (let chunkNum = 0; chunkNum < 9; chunkNum ++) {
         let thisChunkPos = INCLUSIVE_NEIGHBORS[chunkNum].add(player.currentChunk);
         let thisChunk = WORLD_DATA[toStringPos(thisChunkPos)];
@@ -115,15 +158,33 @@ onDraw(() => {
             for (let y = 0; y < CHUNK_SIZE; y++) {
                 let tileData = thisChunk.tiles[x][y];
 
-                if (isPosOnScreen(tileData.pos) == false) { continue }
+                for (item of tileData.content) {
+                    if (isPosOnScreen(item.pos, 3)) itemDrawOrder.push(item)
+                }
 
-                drawRect({
-                    pos: tileData.pos,
-                    width: TILE_SIZE, height: TILE_SIZE,
-                    color: tileData.color
-                })
+                if (isPosOnScreen(tileData.pos)) {
+                    drawRect({
+                        pos: tileData.pos,
+                        width: TILE_SIZE, height: TILE_SIZE,
+                        color: tileData.color
+                    })
+                }
             }
         }
+    }
+
+    itemDrawOrder.sort((a,b) => {
+        if (a.pos.y < b.pos.y) {
+            return -1;
+        } else if (a.pos.y > b.pos.y) {
+            return 1;
+        }
+
+        return 0;
+    })
+
+    for (item of itemDrawOrder) {
+        item.draw()
     }
 })
 
