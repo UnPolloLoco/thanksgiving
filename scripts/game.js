@@ -39,11 +39,23 @@ class Chunk {
 class Tile {
     constructor(pos) {
         this.pos = pos;
-        this.color = rgb(230, randi(150, 210), 0);
+        this.color = rgb(
+            randi(110, 130),
+            randi(60, 80),
+            randi(35, 45),
+        );
         this.content = [];
 
-        if (chance(0.1)) {
-            this.content.push(new Tree(pos));
+        let isOverlappingSpawn = (
+            Math.abs(pos.x) < TILE_SIZE * 2.5
+            &&
+            pos.y < TILE_SIZE * 3
+            &&
+            pos.y > TILE_SIZE * -1.5
+        );
+
+        if (chance(0.2) && !isOverlappingSpawn) {
+            this.content.push(new Tree(this, pos));
         }
     }
 }
@@ -53,6 +65,9 @@ class Player {
         this.pos = vec2(0);
         this.speed = 400;
         this.currentChunk = null;
+        this.useRange = TILE_SIZE * 1;
+
+        this.updatePlayer()
     }
 
     draw() {
@@ -62,19 +77,57 @@ class Player {
             anchor: 'bot'
         })
     }
+
+    updatePlayer() {
+        setCamPos(this.pos)
+
+        this.currentChunk = vec2(
+            Math.floor(this.pos.x / CHUNK_PIXEL_SIZE),
+            Math.floor(this.pos.y / CHUNK_PIXEL_SIZE),
+        );
+    }
+
+    getClosestItem() {
+        let closest = null;
+        let closestDist = null;
+
+        for (item of itemDrawOrder) {
+            if (item == this) { continue }
+
+            let dist = this.pos.sdist(item.pos)
+
+            if (closestDist == null) {
+                closest = item;
+                closestDist = dist;
+            } else {
+                if (dist < closestDist) {
+                    closestDist = dist;
+                    closest = item;
+                }
+            }
+        }
+
+        return [closest, closestDist];
+    }
 }
 
 class Tree {
-    constructor(pos) {
+    constructor(parentTile, pos) {
+        this.parentTile = parentTile;
+
         this.offset = vec2(
             rand(0, TILE_SIZE),
             rand(0, TILE_SIZE),
         );
         this.pos = pos.add(this.offset);
-        this.color = rgb(randi(150,255), randi(0,80), 0)
-        this.rect1 = Rect.fromPoints(this.pos.add(-200, -550), this.pos.add(200, -150));
+        this.color = hsl(randi(0, 50), 1, 0.5);
+        this.rect1 = Rect.fromPoints(this.pos.add(-200, -550), this.pos.add(200, -110));
         this.rect2 = Rect.fromPoints(this.pos.add(-40, -150), this.pos.add(40, 0));
         this.opacity = 1;
+
+        this.health = 3;
+        this.lastHitTime = -9999999;
+        this.flashDuration = 0.1;
     }
 
     draw() {
@@ -86,17 +139,21 @@ class Tree {
         drawRect({
             pos: this.pos,
             width: 80, height: 150,
-            color: this.color,
+            color: this.isFlashing() ? WHITE : rgb(60,40,30),
             anchor: 'bot',
             opacity: this.opacity,
         })
         drawRect({
             pos: this.pos.sub(0,150),
             width: 400, height: 400,
-            color: this.color,
+            color: this.isFlashing() ? WHITE : this.color,
             anchor: 'bot',
             opacity: this.opacity,
         })
+    }
+
+    isFlashing() {
+        return (time() - this.lastHitTime < this.flashDuration)
     }
 }
 
@@ -105,16 +162,6 @@ for (chunkPos of INCLUSIVE_NEIGHBORS) {
 }
 
 const player = new Player()
-
-function updatePlayer() {
-    setCamPos(player.pos)
-
-    player.currentChunk = vec2(
-        Math.floor(player.pos.x / CHUNK_PIXEL_SIZE),
-        Math.floor(player.pos.y / CHUNK_PIXEL_SIZE),
-    );
-}
-updatePlayer()
 
 function isPosOnScreen(pos, margin=1) {
     let p = player.pos;
@@ -136,6 +183,25 @@ function isPosOnScreen(pos, margin=1) {
 }
 
 
+onButtonPress('use', () => {
+    let [closest, closestDist] = player.getClosestItem();
+
+    if (closest instanceof Tree) {
+        if (closestDist ** 0.5 < player.useRange) {
+            closest.health -= 1;
+            closest.lastHitTime = time();
+
+            if (closest.health <= 0) {
+                wait(closest.flashDuration, () => {
+                    closest.parentTile.content = []
+                })
+            }
+
+            debug.log(closest.health)
+        }
+    }
+})
+
 
 onUpdate(() => {
     let moveBy = vec2(0);
@@ -148,13 +214,14 @@ onUpdate(() => {
         moveBy = moveBy.unit().scale(player.speed * dt())
         player.pos = player.pos.add(moveBy)
         
-        updatePlayer()
+        player.updatePlayer()
     }
 })
 
+let itemDrawOrder = []
 
 onDraw(() => {
-    let itemDrawOrder = [player];
+    itemDrawOrder = [player];
 
     for (let chunkNum = 0; chunkNum < 9; chunkNum ++) {
         let thisChunkPos = INCLUSIVE_NEIGHBORS[chunkNum].add(player.currentChunk);
@@ -196,6 +263,7 @@ onDraw(() => {
     for (item of itemDrawOrder) {
         item.draw()
     }
+
 })
 
 

@@ -8,6 +8,7 @@ kaboom({
 		down:    { keyboard: ["down", "s"] },
 		left:    { keyboard: ["left", "a"] },
 		right:    { keyboard: ["right", "d",] },
+		use:    { keyboard: ["space",] },
     }
 });
 
